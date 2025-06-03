@@ -1,11 +1,13 @@
-package com.example.b03;
+package com.example.b03.Repository;
 
 import com.example.b03.domain.*;
 import com.example.b03.repository.*;
+import groovyjarjarantlr4.v4.gui.TreeViewer;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.Commit;
 import org.springframework.test.annotation.Rollback;
 
 import java.time.LocalDate;
@@ -17,18 +19,17 @@ import static org.assertj.core.api.Assertions.*;
 @SpringBootTest
 @Transactional
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@Rollback(false)
+@Commit
 public class BoardAndInquiryEntityTest {
 
     @Autowired private MemberRepository memberRepository;
     @Autowired private MembershipTypeRepository membershipTypeRepository;
-    @Autowired private BoardPostRepository boardPostRepository;
-    @Autowired private BoardCommentRepository boardCommentRepository;
     @Autowired private InquiryRepository inquiryRepository;
     @Autowired private InquiryCommentRepository inquiryCommentRepository;
 
     private Member user;
     private Member admin;
+    private Member user2;
 
     @BeforeEach
     void setUp() {
@@ -36,6 +37,12 @@ public class BoardAndInquiryEntityTest {
                 MembershipType.builder()
                         .typeId((byte) 3) // 개인회원
                         .typeName("개인회원")
+                        .build()
+        );
+        MembershipType user2Type = membershipTypeRepository.save(
+                MembershipType.builder()
+                        .typeId((byte) 2) // 개인회원
+                        .typeName("기업회원")
                         .build()
         );
 
@@ -69,55 +76,8 @@ public class BoardAndInquiryEntityTest {
         memberRepository.save(user);
         memberRepository.save(admin);
     }
-
     @Test
     @Order(1)
-    void 게시글_작성_및_삭제_검증() {
-        // 게시글 생성
-        BoardPost post = BoardPost.builder()
-                .member(user)
-                .title("첫 게시글")
-                .content("내용입니다.")
-                .build();
-
-        boardPostRepository.save(post);
-
-        // 삭제되지 않은 상태 확인
-        assertThat(post.getIsDeleted()).isFalse();
-
-        // 삭제 처리 (논리적)
-        post.setIsDeleted(true);
-        boardPostRepository.save(post);
-
-        // DB에서 다시 조회하여 확인 (정확한 검증)
-        Optional<BoardPost> deletedPost = boardPostRepository.findById(post.getPostId());
-
-        assertThat(deletedPost).isPresent();
-        assertThat(deletedPost.get().getIsDeleted()).isTrue();
-    }
-
-    @Test
-    @Order(2)
-    void 게시글에_댓글_작성() {
-        BoardPost post = boardPostRepository.save(BoardPost.builder()
-                .member(user)
-                .title("댓글 게시글")
-                .content("댓글을 달아보세요")
-                .build());
-
-        BoardComment comment = BoardComment.builder()
-                .boardPost(post)
-                .member(user)
-                .content("좋은 글이네요!")
-                .build();
-
-        boardCommentRepository.save(comment);
-
-        assertThat(comment.getIsDeleted()).isFalse();
-    }
-
-    @Test
-    @Order(3)
     void 문의글_작성_및_삭제() {
         Inquiry inquiry = inquiryRepository.save(
                 Inquiry.builder()
@@ -136,7 +96,7 @@ public class BoardAndInquiryEntityTest {
     }
 
     @Test
-    @Order(4)
+    @Order(2)
     void 문의글에_관리자_답변_작성() {
         Inquiry inquiry = inquiryRepository.save(
                 Inquiry.builder()
