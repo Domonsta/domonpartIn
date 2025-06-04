@@ -26,6 +26,8 @@ public class InquiryResponseDTO {
     //작성한 회원 번호
     private Integer memberNO;
 
+    private Integer adminNo;
+
     //문의글 등록일
     private LocalDateTime createdAt;
 

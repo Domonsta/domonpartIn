@@ -1,25 +1,23 @@
+// src/main/java/com/example/b03/service/InquiryService.java
 package com.example.b03.service;
 
 import com.example.b03.dto.InquiryListDTO;
-import com.example.b03.dto.InquiryRegisterRequestDTO;
-import com.example.b03.dto.InquiryResponseDTO;
+import com.example.b03.dto.InquiryPageRequestDTO;
+import com.example.b03.dto.InquiryPageResponseDTO;
 
-import java.util.List;
-
+// ⭐⭐ InquiryService 인터페이스 ⭐⭐
 public interface InquiryService {
-    // 1:1 문의글 전체보기 (목록 조회)
-    List<InquiryListDTO> getAllInquiries();
 
-    // 1:1 문의글 상세보기
-    InquiryResponseDTO getInquiryDetail(Integer inquiryId);
+    Integer register(InquiryListDTO inquiryListDTO);
 
-    // 1:1 문의글 작성
-    InquiryResponseDTO registerInquiry(InquiryRegisterRequestDTO requestDTO);
+    InquiryListDTO readOne(Integer inquiryId);
 
-    // 1:1 문의글 수정
-    InquiryResponseDTO updateInquiry(Integer inquiryId, InquiryRegisterRequestDTO requestDTO);
+    void modify(InquiryListDTO inquiryListDTO);
 
-    // 1:1 문의글 삭제 (논리적 삭제)
-    // 여기 파라미터를 InquiryServiceImpl과 동일하게 맞춰줘야 해!
-    void deleteInquiry(Integer inquiryId, Integer requestingUserMemberNo); // <-- 이 부분이 수정되었어!
+    void remove(Integer inquiryId);
+
+    // ⭐⭐⭐ 이 메서드가 InquiryServiceImpl의 list 메서드와 정확히 일치해야 합니다! ⭐⭐⭐
+    // 만약 에러 메시지처럼 getAllInquiries였다면 이 부분을 그렇게 바꿔주세요.
+    // 현재 InquiryServiceImpl의 구현에 맞춰 list로 선언합니다.
+    InquiryPageResponseDTO<InquiryListDTO> list(InquiryPageRequestDTO inquiryPageRequestDTO);
 }

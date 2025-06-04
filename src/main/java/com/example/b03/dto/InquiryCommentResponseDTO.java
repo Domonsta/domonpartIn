@@ -23,7 +23,7 @@ public class InquiryCommentResponseDTO {
     private String content;
     //답변 내용
 
-    private Integer adminId;
+    private Integer adminNo;
     //답변을 작성한 관리자 번호
 
     private LocalDateTime createdAt;
