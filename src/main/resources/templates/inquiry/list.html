@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>문의 목록</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { color: #333; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .pagination { margin-top: 20px; text-align: center; }
+        .pagination a {
+            display: inline-block;
+            padding: 8px 16px;
+            text-decoration: none;
+            color: #007bff;
+            border: 1px solid #dee2e6;
+            margin: 0 4px;
+            border-radius: 5px;
+        }
+        .pagination a.active {
+            background-color: #007bff;
+            color: white;
+            border: 1px solid #007bff;
+        }
+        .search-form { margin-bottom: 20px; }
+        .search-form select, .search-form input[type="text"] {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .search-form button {
+            padding: 8px 15px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .register-button {
+            display: block;
+            width: fit-content;
+            margin-bottom: 20px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+        /* ✨ 답변완료 스타일 ✨ */
+        .answered-tag {
+            color: #28a745; /* 초록색 */
+            font-weight: bold;
+            margin-left: 5px;
+            font-size: 0.9em;
+        }
+
+        /* ✨ FAQ 아코디언 스타일 ✨ */
+        .faq-section {
+            margin-top: 40px;
+            margin-bottom: 20px;
+        }
+        .faq-section h2 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .accordian-wrap {
+            border-top: 1px solid #eee; /* 이미지 상단 선 */
+        }
+        .faq-accordian {
+            border-bottom: 1px solid #eee; /* 각 질문별 하단 선 */
+            cursor: pointer; /* 클릭 가능한 요소임을 나타냄 */
+            padding: 15px 0;
+            overflow: hidden; /* 아코디언 열릴 때 내용 안 넘치게 */
+        }
+        .faq-accordian .q-area {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 5px 0;
+        }
+        .faq-accordian .q-area .q-icon {
+            font-weight: bold;
+            color: #dc3545; /* 'Q' 아이콘 색상 */
+            margin-right: 10px;
+            font-size: 1.2em;
+        }
+        .faq-accordian .q-area .q-category {
+            color: #dc3545; /* 카테고리 텍스트 색상 */
+            font-weight: bold;
+            margin-right: 10px;
+            white-space: nowrap; /* 줄바꿈 방지 */
+        }
+        .faq-accordian .q-area .q-text {
+            flex-grow: 1; /* 질문 텍스트가 공간을 채우도록 */
+            font-weight: bold;
+            color: #333;
+        }
+        .faq-accordian .q-area .arrow-icon {
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid #555; /* 아래 화살표 */
+            transition: transform 0.3s ease-in-out;
+        }
+        .faq-accordian.active .q-area .arrow-icon {
+            transform: rotate(180deg); /* 아코디언 열릴 때 위 화살표로 */
+        }
+        /* ✨ 부드러운 애니메이션을 위한 수정 ✨ */
+        .faq-accordian .a-area {
+            max-height: 0; /* 초기에는 높이를 0으로 설정해서 숨김 */
+            overflow: hidden; /* 내용이 넘치지 않도록 숨김 */
+            transition: max-height 0.4s ease-out, padding 0.4s ease-out; /* max-height와 padding 속성에 트랜지션 효과 */
+            padding: 0 20px; /* 초기 패딩 0 */
+            background-color: #f9f9f9; /* 답변 배경색 */
+            border-top: 1px solid #eee;
+            margin-top: 10px;
+        }
+        .faq-accordian.active .a-area {
+            /* max-height는 JavaScript에서 동적으로 설정됨 */
+            padding-top: 15px; /* 열릴 때 패딩 추가 */
+            padding-bottom: 15px; /* 열릴 때 패딩 추가 */
+        }
+        .faq-accordian .a-area p {
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+        .faq-accordian .a-area ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        .faq-accordian .a-area ul li {
+            margin-bottom: 8px;
+        }
+        .faq-accordian .a-area ul li::before {
+            content: "■ "; /* 불릿 포인트 */
+            color: #dc3545; /* 불릿 색상 */
+            font-weight: bold;
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+<h1>문의 목록 📋</h1>
+
+<a href="/inquiry/register" class="register-button">새 문의 등록</a>
+
+<div class="search-form">
+    <form action="/inquiry/list" method="get">
+        <select name="searchType">
+            <option value="t" th:selected="${pageRequestDTO.searchType == 't'}">제목</option>
+            <option value="c" th:selected="${pageRequestDTO.searchType == 'c'}">내용</option>
+            <option value="mn" th:selected="${pageRequestDTO.searchType == 'mn'}">작성자번호</option>
+            <option value="tc" th:selected="${pageRequestDTO.searchType == 'tc'}">제목 + 내용</option>
+            <option value="tcn" th:selected="${pageRequestDTO.searchType == 'tcn'}">제목 + 내용 + 작성자번호</option>
+        </select>
+        <input type="text" name="searchKeyword" th:value="${pageRequestDTO.searchKeyword}" placeholder="검색어 입력">
+        <button type="submit">검색</button>
+    </form>
+</div>
+
+<div class="faq-section">
+    <h2>자주 묻는 질문 🤔</h2>
+    <div class="accordian-wrap">
+        <div class="faq-accordian">
+            <div class="q-area">
+                <span class="q-icon">Q</span>
+                <span class="q-category">[앱 다운로드]</span>
+                <span class="q-text">Smart TV에서 설치한 앱은 어디에서 확인할 수 있나요?</span>
+                <span class="arrow-icon"></span>
+            </div>
+            <div class="a-area">
+                <p>Smart TV에서 설치한 앱은 아래 경로에서 확인 가능합니다.</p>
+                <ul>
+                    <li>2021~2024년형<br>리모컨의 [Home] → 앱 목록에서 설치한 앱 확인</li>
+                    <li>2014년~2020년형 (webOS)<br>리모컨의 [Home] → 화면 하단에서 설치한 앱 확인</li>
+                    <li>2014년 이전 모델 (NetCast)<br>리모컨의 [Home] → 화면 하단의 [마이앱] → 전체 앱의 목록 확인</li>
+                </ul>
+                <p>* 단, TV 모델별로 각 메뉴의 위치나 명칭은 다를 수 있습니다.</p>
+            </div>
+        </div>
+
+        <div class="faq-accordian">
+            <div class="q-area">
+                <span class="q-icon">Q</span>
+                <span class="q-category">[LG계정]</span>
+                <span class="q-text">LG전자 계정은 무엇인가요?</span>
+                <span class="arrow-icon"></span>
+            </div>
+            <div class="a-area">
+                <p>LG전자 계정은 스마트 TV, 모바일 등 다양한 LG 기기 및 서비스에 로그인하여 이용할 수 있는 통합 계정입니다.</p>
+                <p>계정을 통해 개인화된 서비스와 콘텐츠를 편리하게 이용하실 수 있습니다.</p>
+            </div>
+        </div>
+
+        <div class="faq-accordian">
+            <div class="q-area">
+                <span class="q-icon">Q</span>
+                <span class="q-category">[소프트웨어 업데이트]</span>
+                <span class="q-text">Smart TV 소프트웨어는 자동/수동으로 업데이트 되나요?</span>
+                <span class="arrow-icon"></span>
+            </div>
+            <div class="a-area">
+                <p>Smart TV 소프트웨어는 일반적으로 자동 업데이트를 지원하며, 설정 메뉴에서 수동으로 업데이트를 진행할 수도 있습니다.</p>
+                <p>자세한 방법은 TV 모델별 설명서를 참조하시거나 LG전자 고객센터로 문의해주세요.</p>
+            </div>
+        </div>
+
+        <div class="faq-accordian">
+            <div class="q-area">
+                <span class="q-icon">Q</span>
+                <span class="q-category">[앱 이용]</span>
+                <span class="q-text">프리미엄 콘텐츠가 보이지 않습니다.</span>
+                <span class="arrow-icon"></span>
+            </div>
+            <div class="a-area">
+                <p>프리미엄 콘텐츠가 보이지 않는 경우, 다음과 같은 사항을 확인해주세요.</p>
+                <ul>
+                    <li>네트워크 연결 상태가 양호한지 확인</li>
+                    <li>LG 계정에 로그인되어 있는지 확인</li>
+                    <li>해당 콘텐츠에 대한 이용권이 있는지 확인</li>
+                    <li>TV 소프트웨어가 최신 버전인지 확인</li>
+                </ul>
+                <p>여전히 문제가 해결되지 않는다면, 고객센터로 문의 바랍니다.</p>
+            </div>
+        </div>
+
+        <div class="faq-accordian">
+            <div class="q-area">
+                <span class="q-icon">Q</span>
+                <span class="q-category">[앱 다운로드]</span>
+                <span class="q-text">앱을 삭제했는데, 다시 설치하려면 어떻게 해야 되나요?</span>
+                <span class="arrow-icon"></span>
+            </div>
+            <div class="a-area">
+                <p>삭제한 앱을 다시 설치하려면, 스마트 TV의 'LG Content Store' (또는 '앱 스토어')에 접속하여 앱을 검색하고 재설치할 수 있습니다.</p>
+                <p>LG 계정으로 로그인 후 이전에 구매했거나 다운로드했던 앱 목록에서 찾을 수도 있습니다.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<table>
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>제목</th>
+        <th>작성자번호</th>
+        <th>작성일</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="dto : ${responseDTO.dtoList}">
+        <td th:text="${dto.inquiryId}"></td>
+        <td>
+            <a th:href="@{/inquiry/read(
+                inquiryId=${dto.inquiryId},
+                page=${responseDTO.page},
+                size=${responseDTO.size},
+                searchType=${pageRequestDTO.searchType},  searchKeyword=${pageRequestDTO.searchKeyword} )}" th:text="${dto.title}"></a>
+            <span th:if="${dto.commentCount > 0}" class="answered-tag">[답변완료]</span>
+        </td>
+        <td th:text="${dto.memberNo}"></td>
+        <td th:text="${#temporals.format(dto.createdAt, 'yyyy-MM-dd HH:mm')}"></td>
+    </tr>
+    <tr th:if="${#lists.isEmpty(responseDTO.dtoList)}">
+        <td colspan="4">등록된 문의글이 없습니다.</td>
+    </tr>
+    </tbody>
+</table>
+
+<div class="pagination">
+    <a th:if="${responseDTO.prev}"
+       th:href="@{/inquiry/list(
+           page=${responseDTO.startPage -1},
+           size=${responseDTO.size},
+           searchType=${pageRequestDTO.searchType},  searchKeyword=${pageRequestDTO.searchKeyword} )}">이전</a>
+
+    <a th:each="num : ${#numbers.sequence(responseDTO.startPage, responseDTO.endPage)}"
+       th:href="@{/inquiry/list(
+           page=${num},
+           size=${responseDTO.size},
+           searchType=${pageRequestDTO.searchType},  searchKeyword=${pageRequestDTO.searchKeyword} )}"
+       th:classappend="${num == responseDTO.page} ? 'active' : ''"
+       th:text="${num}"></a>
+
+    <a th:if="${responseDTO.next}"
+       th:href="@{/inquiry/list(
+           page=${responseDTO.endPage + 1},
+           size=${responseDTO.size},
+           searchType=${pageRequestDTO.searchType},  searchKeyword=${pageRequestDTO.searchKeyword} )}">다음</a>
+</div>
+
+<script>
+    // 아코디언 기능 자바스크립트 (하드코딩된 HTML에만 적용)
+    document.addEventListener('DOMContentLoaded', function() {
+        const accordions = document.querySelectorAll('.faq-accordian');
+
+        accordions.forEach(accordion => {
+            accordion.addEventListener('click', function() {
+                const aArea = this.querySelector('.a-area');
+                const isActive = this.classList.contains('active');
+
+                // 모든 아코디언 닫기
+                accordions.forEach(item => {
+                    if (item !== this) { // 현재 클릭된 아코디언이 아니면
+                        item.classList.remove('active');
+                        item.querySelector('.a-area').style.maxHeight = '0';
+                        // 패딩도 같이 0으로 되돌리기
+                        item.querySelector('.a-area').style.paddingTop = '0';
+                        item.querySelector('.a-area').style.paddingBottom = '0';
+                    }
+                });
+
+                // 현재 클릭된 아코디언 토글
+                if (isActive) {
+                    this.classList.remove('active');
+                    aArea.style.maxHeight = '0';
+                    aArea.style.paddingTop = '0';
+                    aArea.style.paddingBottom = '0';
+                } else {
+                    this.classList.add('active');
+                    // scrollHeight를 사용해서 실제 콘텐츠 높이만큼 max-height 설정
+                    aArea.style.maxHeight = aArea.scrollHeight + 'px';
+                    // 열릴 때 패딩 추가
+                    aArea.style.paddingTop = '15px';
+                    aArea.style.paddingBottom = '15px';
+                }
+            });
+        });
+    });
+</script>
+
+</body>
+</html>

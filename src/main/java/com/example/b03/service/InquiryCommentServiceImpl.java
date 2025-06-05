@@ -1,4 +1,3 @@
-// InquiryCommentServiceImpl.java (예시)
 package com.example.b03.service;
 
 import com.example.b03.domain.Inquiry;
@@ -12,7 +11,8 @@ import com.example.b03.repository.InquiryRepository;
 import com.example.b03.repository.MemberRepository;
 import com.example.b03.repository.MembershipTypeRepository;
 import lombok.RequiredArgsConstructor;
-import org.modelmapper.ModelMapper; // ModelMapper 임포트!
+import lombok.extern.log4j.Log4j2;
+import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,30 +21,33 @@ import java.util.stream.Collectors;
 
 @Service
 @Transactional
+@Log4j2
 @RequiredArgsConstructor
-public class InquiryCommentServiceImpl implements InquiryCommentService { // ⭐ InquiryCommentService 인터페이스를 implements 합니다.
+public class InquiryCommentServiceImpl implements InquiryCommentService {
 
     private final InquiryCommentRepository inquiryCommentRepository;
     private final InquiryRepository inquiryRepository;
     private final MemberRepository memberRepository;
-    private final MembershipTypeRepository membershipTypeRepository; // 필요하다면 추가
-    private final ModelMapper modelMapper; // ⭐ ModelMapper 주입!
+    private final MembershipTypeRepository membershipTypeRepository;
+    private final ModelMapper modelMapper;
 
-    // createComment, updateComment, deleteComment 메서드 구현은 그대로 유지 (세부 로직은 여기에 있겠죠?)
+    private static final Byte ADMIN_MEMBERSHIP_TYPE_ID = 1;
 
-    @Override // 인터페이스 메서드 구현
+    @Override
     public InquiryCommentResponseDTO createComment(InquiryCommentRequestDTO requestDTO) {
-        // ... (기존 createComment 로직)
-        // 예시:
         Inquiry inquiry = inquiryRepository.findById(requestDTO.getInquiryId())
-                .orElseThrow(() -> new IllegalArgumentException("해당 문의를 찾을 수 없습니다."));
-        if (inquiry.getIsDeleted()) { // isDeleted 필드 확인
+                .orElseThrow(() -> new IllegalArgumentException("해당 문의를 찾을 수 없습니다: " + requestDTO.getInquiryId()));
+
+        if (inquiry.getIsDeleted()) {
             throw new IllegalArgumentException("삭제된 문의에는 답변을 작성할 수 없습니다.");
         }
+
         Member admin = memberRepository.findById(requestDTO.getAdminNo())
-                .orElseThrow(() -> new IllegalArgumentException("해당 관리자를 찾을 수 없습니다."));
-        // TODO: 관리자 권한 확인 로직 추가 (testMember.getMemberNo()가 아니라 admin의 membershipType 확인)
-        // if (admin.getMembershipType().getTypeNo() != ADMIN_TYPE_NO) { ... }
+                .orElseThrow(() -> new IllegalArgumentException("해당 관리자를 찾을 수 없습니다: " + requestDTO.getAdminNo()));
+
+        if (admin.getMembershipType() == null || !admin.getMembershipType().getTypeId().equals(ADMIN_MEMBERSHIP_TYPE_ID)) {
+            throw new IllegalArgumentException("관리자만 답변을 작성할 수 있습니다.");
+        }
 
         InquiryComment comment = InquiryComment.builder()
                 .inquiry(inquiry)
@@ -53,77 +56,84 @@ public class InquiryCommentServiceImpl implements InquiryCommentService { // ⭐
                 .build();
         inquiryCommentRepository.save(comment);
 
-        return entityToDto(comment); // ModelMapper를 사용하는 entityToDto 호출
+        log.info("새로운 답변 등록: " + comment.getCommentId());
+        return entityToDto(comment);
     }
 
-    @Override // 인터페이스 메서드 구현
+    @Override
     public InquiryCommentResponseDTO updateComment(Integer commentId, InquiryCommentRequestDTO requestDTO) {
-        // ... (기존 updateComment 로직)
         InquiryComment comment = inquiryCommentRepository.findById(commentId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 답변을 찾을 수 없습니다."));
+                .orElseThrow(() -> new IllegalArgumentException("해당 답변을 찾을 수 없습니다: " + commentId));
+
         if (comment.getIsDeleted()) {
             throw new IllegalArgumentException("삭제된 답변은 수정할 수 없습니다.");
         }
+
         if (!comment.getAdmin().getMemberNo().equals(requestDTO.getAdminNo())) {
             throw new IllegalArgumentException("답변 작성 관리자만 수정할 수 있습니다.");
         }
 
-        comment.setContent(requestDTO.getContent()); // 내용 수정
-        // comment.onUpdate()는 BaseEntity의 PreUpdate 덕분에 자동으로 호출될 것입니다.
-        inquiryCommentRepository.save(comment); // 변경사항 저장
+        // ⭐️⭐️⭐️ 엔티티 수정 없이, Lombok @Data가 생성하는 setter 사용 ⭐️⭐️⭐️
+        comment.setContent(requestDTO.getContent()); // 기존 changeContent() 대신 setContent() 사용
 
-        return entityToDto(comment); // ModelMapper를 사용하는 entityToDto 호출
+        inquiryCommentRepository.save(comment); // 변경된 엔티티를 저장해야 DB에 반영됨
+
+        log.info("답변 수정 완료: " + comment.getCommentId());
+        return entityToDto(comment);
     }
 
-    @Override // 인터페이스 메서드 구현
+    @Override
     public void deleteComment(Integer commentId, Integer adminNo) {
-        // ... (기존 deleteComment 로직)
         InquiryComment comment = inquiryCommentRepository.findById(commentId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 답변을 찾을 수 없습니다."));
+                .orElseThrow(() -> new IllegalArgumentException("해당 답변을 찾을 수 없습니다: " + commentId));
+
         if (comment.getIsDeleted()) {
             throw new IllegalArgumentException("이미 삭제된 답변입니다.");
         }
+
         if (!comment.getAdmin().getMemberNo().equals(adminNo)) {
             throw new IllegalArgumentException("답변 작성 관리자만 삭제할 수 있습니다.");
         }
 
-        comment.setIsDeleted(true); // 논리적 삭제
-        inquiryCommentRepository.save(comment);
+        // ⭐️⭐️⭐️ 엔티티 수정 없이, Lombok @Data가 생성하는 setter 사용 ⭐️⭐️⭐️
+        comment.setIsDeleted(true); // 또는 comment.setDeleted(true); (Lombok 생성 규칙에 따라)
+
+        inquiryCommentRepository.save(comment); // 변경된 엔티티를 저장해야 DB에 반영됨
+
+        log.info("답변 삭제 완료 (논리적 삭제): " + commentId);
     }
 
-
-    @Override // 인터페이스 메서드 구현
-    @Transactional(readOnly = true) // 조회 메서드는 readOnly = true 로 설정하는게 성능에 좋아
+    @Override
+    @Transactional(readOnly = true)
     public List<InquiryCommentResponseDTO> getCommentsForInquiry(Integer inquiryId) {
         Inquiry inquiry = inquiryRepository.findById(inquiryId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 문의를 찾을 수 없습니다."));
+                .orElseThrow(() -> new IllegalArgumentException("해당 문의를 찾을 수 없습니다: " + inquiryId));
 
-        // 삭제되지 않은 답변만 가져오기
         List<InquiryComment> comments = inquiryCommentRepository.findByInquiryAndIsDeletedFalseOrderByCreatedAtAsc(inquiry);
 
-        // Stream API와 ModelMapper를 사용하는 entityToDto 메서드를 사용하여 DTO 리스트로 변환
         return comments.stream()
-                .map(this::entityToDto) // ⭐ ModelMapper를 사용하는 entityToDto 호출!
+                .map(this::entityToDto)
                 .collect(Collectors.toList());
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public int getCommentCountByInquiryId(Integer inquiryId) {
+        Inquiry inquiry = inquiryRepository.findById(inquiryId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 문의를 찾을 수 없습니다: " + inquiryId));
 
-    // ⭐⭐⭐ 이 메서드를 InquiryCommentService '구현체' 클래스에 넣어주세요! ⭐⭐⭐
+        return inquiryCommentRepository.countByInquiryAndIsDeletedFalse(inquiry);
+    }
+
     private InquiryCommentResponseDTO entityToDto(InquiryComment inquiryComment) {
         InquiryCommentResponseDTO dto = modelMapper.map(inquiryComment, InquiryCommentResponseDTO.class);
 
-        // 연관관계 필드(inquiry, admin)는 ModelMapper가 직접 매핑하지 못하는 경우가 많으므로 수동으로 처리
-        // 엔티티가 null일 경우를 대비해 null 체크도 해주는 것이 안전합니다.
         if (inquiryComment.getInquiry() != null) {
             dto.setInquiryId(inquiryComment.getInquiry().getInquiryId());
         }
         if (inquiryComment.getAdmin() != null) {
             dto.setAdminNo(inquiryComment.getAdmin().getMemberNo());
         }
-
-        // isDeleted 필드는 BaseEntity에 있고 InquiryCommentResponseDTO에도 동일한 이름이 있다면 자동으로 매핑될 가능성이 높지만,
-        // 명확하게 하기 위해 필요하다면 수동으로 추가할 수도 있습니다.
-        // dto.setIsDeleted(inquiryComment.getIsDeleted()); // 필요하다면 추가
 
         return dto;
     }

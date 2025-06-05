@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>문의 등록</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { color: #333; }
+        form div { margin-bottom: 15px; }
+        form label { display: block; margin-bottom: 5px; font-weight: bold; }
+        form input[type="text"],
+        form textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box; /* 패딩이 너비에 포함되도록 */
+        }
+        form textarea { resize: vertical; min-height: 150px; }
+        form button {
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        form button[type="reset"] { background-color: #6c757d; }
+        .error-message { color: red; font-size: 0.9em; margin-top: 5px; }
+    </style>
+</head>
+<body>
+<h1>새 문의 등록 📝</h1>
+
+<form action="/inquiry/register" method="post">
+    <div>
+        <label for="title">제목:</label>
+        <input type="text" id="title" name="title" required>
+    </div>
+    <div>
+        <label for="content">내용:</label>
+        <textarea id="content" name="content" required></textarea>
+    </div>
+    <div>
+        <label for="memberNo">작성자 회원 번호 (임시):</label>
+        <input type="text" id="memberNo" name="memberNo" value="1" required>
+    </div>
+    <button type="submit">등록</button>
+    <button type="reset">초기화</button>
+    <button type="button" onclick="location.href='/inquiry/list'">취소</button>
+</form>
+</body>
+</html>

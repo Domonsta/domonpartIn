@@ -1,8 +1,9 @@
 package com.example.b03.service;
 
-import com.example.b03.domain.InquiryComment; // 이 import는 필요 없어져요
 import com.example.b03.dto.InquiryCommentRequestDTO;
 import com.example.b03.dto.InquiryCommentResponseDTO;
+// import com.example.b03.dto.InquiryCommentPageRequestDTO; // ⭐ 제거: 존재하지 않는 DTO
+// import com.example.b03.dto.InquiryCommentPageResponseDTO; // ⭐ 제거: 존재하지 않는 DTO
 
 import java.util.List;
 
@@ -31,13 +32,12 @@ public interface InquiryCommentService {
     void deleteComment(Integer commentId, Integer adminNo);
 
     /**
-     * 특정 문의에 대한 답변 목록을 조회합니다. (관리자용)
+     * 특정 문의에 대한 답변 목록을 조회합니다. (삭제되지 않은 답변만)
      * @param inquiryId 답변을 조회할 문의글의 ID
      * @return 해당 문의글에 대한 답변 응답 DTO 목록
      */
-    List<InquiryCommentResponseDTO> getCommentsForInquiry(Integer inquiryId);
+    List<InquiryCommentResponseDTO> getCommentsForInquiry(Integer inquiryId); // ⭐ 수정: 반환 타입, 파라미터 변경
 
-    // ⭐⭐⭐ private InquiryCommentResponseDTO entityToDto(...) 이 메서드는 인터페이스에서 제거해야 합니다! ⭐⭐⭐
-    // 인터페이스는 메서드의 선언만 가능하며, private 메서드나 구현부를 가질 수 없습니다.
-    // 이 메서드는 InquiryCommentService의 '구현체' 클래스에 있어야 합니다.
+    //댓글 개수 세는 메소드 추가!
+    int getCommentCountByInquiryId(Integer inquiryId);
 }

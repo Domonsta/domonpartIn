@@ -1,21 +1,24 @@
 package com.example.b03.dto;
 
 import lombok.Builder;
-import lombok.Data;
+import lombok.Data; // @Data 어노테이션 안에 @Getter가 포함되어 있어!
 
 import java.util.List;
 
-@Data
-public class InquiryPageResponseDTO<E> { // 제네릭 타입으로 받아서 어떤 DTO든 페이징 처리 가능하도록!
+@Data // @Data 어노테이션이 @Getter, @Setter 등을 포함하고 있어서 필드에 접근 가능해!
+public class InquiryPageResponseDTO<E> {
 
-    private List<E> dtoList; // 페이징 처리된 데이터 리스트
-    private int totalCount; // 총 항목 수
-    private int page; // 현재 페이지 번호
-    private int size; // 페이지 사이즈
-    private int start; // 시작 페이지 번호
-    private int end; // 끝 페이지 번호
-    private boolean prev; // 이전 페이지 존재 여부
-    private boolean next; // 다음 페이지 존재 여부
+    private List<E> dtoList;
+    private int totalCount;
+    private int page;
+    private int size;
+
+    // ⭐⭐⭐ 필드 이름을 startPage와 endPage로 변경! ⭐⭐⭐
+    private int startPage;
+    private int endPage;
+
+    private boolean prev;
+    private boolean next;
 
     @Builder(builderMethodName = "withAll")
     public InquiryPageResponseDTO(List<E> dtoList, int totalCount, int page, int size) {
@@ -24,16 +27,24 @@ public class InquiryPageResponseDTO<E> { // 제네릭 타입으로 받아서 어
         this.page = page;
         this.size = size;
 
-        // 페이징 계산 로직 (10개씩 묶는다고 가정)
-        this.end = (int)(Math.ceil(this.page / 10.0)) * 10;
-        this.start = this.end - 9;
+        // ⭐⭐⭐ 계산 로직에서도 필드 이름을 변경! ⭐⭐⭐
+        this.endPage = (int)(Math.ceil(this.page / 10.0)) * 10;
+        this.startPage = this.endPage - 9;
 
         int realEnd = (int)(Math.ceil(totalCount / (double)size));
-        if (realEnd < this.end) {
-            this.end = realEnd;
+        if (realEnd < this.endPage) {
+            this.endPage = realEnd;
         }
 
-        this.prev = this.start > 1;
-        this.next = this.end < realEnd;
+        this.prev = this.startPage > 1;
+        this.next = this.endPage < realEnd;
+
+        // totalCount가 0인 경우를 고려 (prev, next, startPage, endPage가 이상해지는 것 방지)
+        if (totalCount == 0) {
+            this.startPage = 1;
+            this.endPage = 1;
+            this.prev = false;
+            this.next = false;
+        }
     }
 }
